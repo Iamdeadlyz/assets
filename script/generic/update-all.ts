@@ -1,5 +1,8 @@
 import { BinanceAction } from "../blockchain/binance";
+import { SmartchainAction } from "../blockchain/smartchain";
+import { EthereumAction } from "../blockchain/ethereum";
 import { CosmosAction } from "../blockchain/cosmos";
+import { AssetInfos } from "../generic/asset-infos";
 import { EthForks } from "../generic/eth-forks";
 import { FoldersFiles } from "../generic/folders-and-files";
 import { JsonAction } from "../generic/json-format";
@@ -10,20 +13,23 @@ import { TezosAction } from "../blockchain/tezos";
 import { TronAction } from "../blockchain/tron";
 import { Validators } from "../generic/validators";
 import { WavesAction } from "../blockchain/waves";
-import { Allowlist } from "../generic/allowlists";
+import { Allowlists } from "../generic/allowlists";
 import { ActionInterface, CheckStepInterface } from "../generic/interface";
 import * as chalk from 'chalk';
 import * as bluebird from "bluebird";
 
 const actionList: ActionInterface[] = [
     new FoldersFiles(),
+    new AssetInfos(),
     new EthForks(),
     new LogoSize(),
-    new Allowlist(),
+    new Allowlists(),
     new Validators(),
     new JsonAction(),
     // chains:
     new BinanceAction(),
+    new SmartchainAction(),
+    new EthereumAction(),
     new CosmosAction(),
     new KavaAction(),
     new TerraAction(),
@@ -170,19 +176,34 @@ async function consistencyFixByList(actions: ActionInterface[]) {
     console.log("All consistency fixes done.");
 }
 
-async function updateByList(actions: ActionInterface[]) {
-    console.log("Running updates (using external data sources) ...");
+async function updateAutoByList(actions: ActionInterface[]) {
+    console.log("Running auto updates (using external data sources) ...");
     await bluebird.each(actions, async (action) => {
         try {
-            if (action.update) {
-                console.log(`Update '${action.getName()}':`);
-                await action.update();
+            if (action.updateAuto) {
+                console.log(`Auto update '${action.getName()}':`);
+                await action.updateAuto();
             }
         } catch (error) {
             console.log(`Caught error: ${error.message}`);
         }
     });
-    console.log("All updates done.");
+    console.log("All auto updates done.");
+}
+
+async function updateManualByList(actions: ActionInterface[]) {
+    console.log("Running manual updates (using external data sources) ...");
+    await bluebird.each(actions, async (action) => {
+        try {
+            if (action.updateManual) {
+                console.log(`Manual update '${action.getName()}':`);
+                await action.updateManual();
+            }
+        } catch (error) {
+            console.log(`Caught error: ${error.message}`);
+        }
+    });
+    console.log("All manual updates done.");
 }
 
 export async function sanityCheckAll(): Promise<[string[], string[]]> {
@@ -201,6 +222,10 @@ export async function consistencyFixAll(): Promise<void> {
     await consistencyFixByList(actionList);
 }
 
-export async function updateAll(): Promise<void> {
-    await updateByList(actionList);
+export async function updateAutoAll(): Promise<void> {
+    await updateAutoByList(actionList);
+}
+
+export async function updateManualAll(): Promise<void> {
+    await updateManualByList(actionList);
 }

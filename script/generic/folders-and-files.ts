@@ -4,8 +4,9 @@ import {
 } from "../generic/filesystem";
 import { CheckStepInterface, ActionInterface } from "../generic/interface";
 import {
-    chainsPath,
+    allChains,
     getChainLogoPath,
+    getChainAssetInfoPath,
     getChainAssetsPath,
     getChainAssetPath,
     getChainAssetLogoPath,
@@ -17,8 +18,6 @@ import {
 import { isLogoOK } from "../generic/image";
 import { isLowerCase } from "../generic/types";
 import * as bluebird from "bluebird";
-
-const foundChains = readDirSync(chainsPath)
 
 export class FoldersFiles implements ActionInterface {
     getName(): string { return "Folders and Files"; }
@@ -42,7 +41,7 @@ export class FoldersFiles implements ActionInterface {
                 getName: () => { return "Chain folders are lowercase, contain only predefined list of files"},
                 check: async () => {
                     const errors: string[] = [];
-                    foundChains.forEach(chain => {
+                    allChains.forEach(chain => {
                         if (!isLowerCase(chain)) {
                             errors.push(`Chain folder must be in lowercase "${chain}"`);
                         }
@@ -59,7 +58,7 @@ export class FoldersFiles implements ActionInterface {
                 getName: () => { return "Chain folders have logo, and correct size"},
                 check: async () => {
                     const errors: string[] = [];
-                    await bluebird.each(foundChains, async (chain) => {
+                    await bluebird.each(allChains, async (chain) => {
                         const chainLogoPath = getChainLogoPath(chain);
                         if (!isPathExistsSync(chainLogoPath)) {
                             errors.push(`File missing at path "${chainLogoPath}"`);
@@ -73,10 +72,11 @@ export class FoldersFiles implements ActionInterface {
                 }
             },
             {
-                getName: () => { return "Asset folders contain logo"},
+                getName: () => { return "Asset folders contain logo and info"},
                 check: async () => {
                     const errors: string[] = [];
-                    foundChains.forEach(chain => {
+                    const warnings: string[] = [];
+                    allChains.forEach(chain => {
                         const assetsPath = getChainAssetsPath(chain);
                         if (isPathExistsSync(assetsPath)) {
                             readDirSync(assetsPath).forEach(address => {
@@ -84,10 +84,16 @@ export class FoldersFiles implements ActionInterface {
                                 if (!isPathExistsSync(logoFullPath)) {
                                     errors.push(`Missing logo file for asset '${chain}/${address}' -- ${logoFullPath}`);
                                 }
+                                const infoFullPath = getChainAssetInfoPath(chain, address);
+                                if (!isPathExistsSync(infoFullPath)) {
+                                    const msg = `Missing info file for asset '${chain}/${address}' -- ${infoFullPath}`;
+                                    //console.log(msg);
+                                    warnings.push(msg);
+                                }
                             }) ;
                         }
                     });
-                    return [errors, []];
+                    return [errors, warnings];
                 }
             },
             /*
@@ -95,7 +101,7 @@ export class FoldersFiles implements ActionInterface {
                 getName: () => { return "Asset folders contain info.json"},
                 check: async () => {
                     const warnings: string[] = [];
-                    foundChains.forEach(chain => {
+                    allChains.forEach(chain => {
                         const assetsPath = getChainAssetsPath(chain);
                         if (isPathExistsSync(assetsPath)) {
                             readDirSync(assetsPath).forEach(address => {
@@ -114,7 +120,7 @@ export class FoldersFiles implements ActionInterface {
                 getName: () => { return "Asset folders contain only predefined set of files"},
                 check: async () => {
                     const errors: string[] = [];
-                    foundChains.forEach(chain => {
+                    allChains.forEach(chain => {
                         const assetsPath = getChainAssetsPath(chain);
                         if (isPathExistsSync(assetsPath)) {
                             readDirSync(assetsPath).forEach(address => {
